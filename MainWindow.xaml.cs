@@ -65,10 +65,7 @@ namespace WpfApp1
 
         private void NotifyPropertyChanged([CallerMemberName] string propertyName ="")
         {
-            if (PropertyChanged != null)
-            {
-                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
-            }
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
     }
@@ -76,11 +73,11 @@ namespace WpfApp1
     public class MatchCheck
     {
         private string filename;
-        private List<int> indexes;
-        private byte[] hash;
+        private readonly List<int> indexes;
+        private readonly byte[] hash;
         public MatchCheck()
         {
-            this.indexes = new List<int>();
+            this.indexes = [];
             this.filename = "";
             hash = [];
         }
@@ -131,7 +128,6 @@ namespace WpfApp1
     public partial class MainWindow : Window
     {
 
-        private bool scanned;
         private List<ListItems> itemsInDir;
         private List<MatchCheck> duplicateItems;
 
@@ -140,7 +136,6 @@ namespace WpfApp1
         public MainWindow()
         {
             InitializeComponent();
-            this.scanned = false;
             this.itemsInDir = new List<ListItems>();
             this.duplicateItems = new List<MatchCheck>();
             this.duplicateFileNames = new HashSet<string>();
@@ -185,8 +180,6 @@ namespace WpfApp1
                     this.Title = $"Displaying Contents of: {folderName}";
                 }
 
-                this.scanned = false;
-
             }
         }
 
@@ -194,7 +187,7 @@ namespace WpfApp1
         { 
             if (lstFiles.SelectedItem != null)
             {
-                string txt = lstFiles.SelectedItem.ToString();
+                string? txt = lstFiles.SelectedItem.ToString();
 
                 string argument = "/select, \"" + txt + "\"";
 
@@ -205,7 +198,7 @@ namespace WpfApp1
 
         private void ctxMatch_Click(object sender, RoutedEventArgs e)
         {
-            List<string> items = new List<string>();
+            List<string> items = [];
             string? fileName = lstFiles.SelectedItem.ToString();
 
             
@@ -284,8 +277,8 @@ namespace WpfApp1
 
         private void ButtonScan_Click(object sender, RoutedEventArgs e)
         {
-            bool nameCheck = (bool)chkNameMatches.IsChecked;
-            bool contentCheck = (bool)chkContentMatches.IsChecked;
+            bool nameCheck = chkNameMatches.IsChecked is null ? false : (bool)chkNameMatches.IsChecked;
+            bool contentCheck = chkContentMatches.IsChecked is null ? false : (bool)chkContentMatches.IsChecked;
             bool exists = false;
 
             List<MatchCheck> nameMatches = new List<MatchCheck>();
@@ -295,9 +288,10 @@ namespace WpfApp1
                 Mouse.OverrideCursor = Cursors.Wait;
                 foreach (var item in lstFiles.Items)
                 {
+                    var itemName = System.IO.Path.GetFileName(item.ToString());
                     foreach (var tmp in nameMatches)
                     {
-                        if (System.IO.Path.GetFileName(item.ToString()).Equals(tmp.getFilename()))
+                        if (itemName != null && itemName.Equals(tmp.getFilename()))
                         {
                             tmp.addIndex(lstFiles.Items.IndexOf(item));
                             exists = true;
@@ -305,7 +299,11 @@ namespace WpfApp1
                     }
                     if (!exists)
                     {
-                        nameMatches.Add(new MatchCheck(System.IO.Path.GetFileName(item.ToString()), lstFiles.Items.IndexOf(item)));
+                        if (itemName != null)
+                        {
+                            nameMatches.Add(new MatchCheck(itemName, lstFiles.Items.IndexOf(item)));
+                        }
+                        
                     }
                 }
 
