@@ -1,0 +1,50 @@
+﻿<Window x:Class="WpfApp1.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WpfApp1"
+        mc:Ignorable="d"
+        Title="File Checker" Height="500" Width="800">
+    <Window.Resources>
+        <local:ListItems x:Key="itemsInDir" />
+        <Style TargetType="ListBoxItem">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsDuplicate}">
+                    <DataTrigger.Value>
+                        true
+                    </DataTrigger.Value>
+                    <Setter Property="Background" Value="Red" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+    <Grid Margin="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <ListBox Grid.Column="0" x:Name="lstFiles" ItemsSource="{Binding Source={StaticResource itemsInDir}}">
+            <ListBox.ContextMenu>
+                <ContextMenu Name="lstCtxMenu" StaysOpen="True">
+                    <MenuItem Header="Open in File Explorer" Click="ctxOpen_Click"/>
+                    <MenuItem Header="Reveal Matches" Click="ctxMatch_Click" />
+                </ContextMenu>
+            </ListBox.ContextMenu>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock x:Name="listItem" Text="{Binding Filename}" />
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+        <StackPanel Grid.Column="1" Margin="5,0,0,0">
+            <Button x:Name="btnDirPicker" Margin="0,5,0,0" Click="ButtonPickDirectory_Click" Content="Pick Directory" />
+            <CheckBox x:Name="chkNameMatches" Margin="0,10,0,0" Content="Check for filename matches"/>
+            <CheckBox x:Name="chkContentMatches" Content="Check for similar content"/>
+            <Button x:Name="btnScan" Margin="0,5,0,0" Content="Scan for Matches" Click="ButtonScan_Click"/>
+        </StackPanel>
+
+    </Grid>
+
+</Window>
