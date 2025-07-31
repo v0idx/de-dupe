@@ -15,6 +15,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Security.Cryptography;
+using System.Windows.Media.Animation;
 
 namespace WpfApp1
 {
@@ -75,18 +77,26 @@ namespace WpfApp1
     {
         private string filename;
         private List<int> indexes;
-
+        private byte[] hash;
         public MatchCheck()
         {
             this.indexes = new List<int>();
             this.filename = "";
+            hash = [];
         }
 
         public MatchCheck(string inName, int inIndex)
         {
             this.filename = inName;
-            this.indexes = new List<int>();
-            this.indexes.Add(inIndex);
+            this.indexes = [inIndex];
+            hash = [];
+        }
+
+        public MatchCheck(byte[] inHash, int inIndex)
+        {
+            this.filename = "";
+            this.hash = inHash;
+            this.indexes = [inIndex];
         }
 
         public void setFilename(string inName)
@@ -97,6 +107,11 @@ namespace WpfApp1
         public void addIndex(int index)
         {
             indexes.Add(index);
+        }
+
+        public byte[] getHash()
+        {
+            return hash;
         }
 
         public string getFilename()
@@ -193,27 +208,78 @@ namespace WpfApp1
             List<string> items = new List<string>();
             string? fileName = lstFiles.SelectedItem.ToString();
 
-            if (fileName != null)
-            {
-                foreach (var item in duplicateItems)
+            
+
+                if (fileName != null)
                 {
-                    if (item.getFilename() == System.IO.Path.GetFileName(fileName))
+
+                    byte[] currHash = [];
+                    using (var md5 = MD5.Create())
                     {
-                        foreach (var tmp in this.itemsInDir)
+                        using (var stream = File.OpenRead(fileName))
                         {
-                            if (tmp.Filename.Contains(item.getFilename()))
+                            currHash = md5.ComputeHash(stream);
+                        }
+                    }
+
+                foreach (var item in duplicateItems)
+                    {
+                        if (item.getFilename() == System.IO.Path.GetFileName(fileName))
+                        {
+                            foreach (var tmp in this.itemsInDir)
                             {
-                                items.Add(tmp.Filename);
+                                if (tmp.Filename.Contains(item.getFilename()))
+                                {
+                                    items.Add(tmp.Filename);
+                                }
+                            }
+                        } else
+                    {
+                        if (item.getHash().SequenceEqual(currHash))
+                        {
+                            foreach(var idx in item.getIndexes())
+                            {
+                                items.Add(this.itemsInDir[idx].Filename);
                             }
                         }
                     }
+
+
+
+                    }
+
+
                 }
-
-
-            }
 
             Window1 matchWin = new Window1(items);
             matchWin.Show();
+        }
+
+        private void GetDuplicates(List<MatchCheck> matches)
+        {
+
+            List<MatchCheck> duplicates = new List<MatchCheck>();
+
+
+            foreach(var item in matches)
+            {
+                var indexes = item.getIndexes();
+
+                if (indexes.Count() > 1)
+                {
+                    duplicates.Add(item);
+                    foreach(var idx in indexes)
+                    {
+                        this.itemsInDir[idx].IsDuplicate = true;
+                    }
+                }
+            }
+
+            if (duplicates != null)
+            {
+                this.duplicateItems.AddRange(duplicates);
+            }
+
         }
 
         private void ButtonScan_Click(object sender, RoutedEventArgs e)
@@ -243,34 +309,48 @@ namespace WpfApp1
                     }
                 }
 
-                List<MatchCheck> dupes = new List<MatchCheck>();
+                GetDuplicates(nameMatches);
 
-                foreach (var item in nameMatches)
+            }
+            if (contentCheck)
+            {
+
+                var matches = new List<MatchCheck>();
+
+                foreach (var item in this.itemsInDir)
                 {
-                    var indexs = item.getIndexes();
-
-                    if (indexs.Count > 1)
+                    var currItem = item.Filename;
+                    byte[] currHash = [];
+                    using (var md5 = MD5.Create())
                     {
-                        dupes.Add(item);
-                        foreach (var idx in indexs)
+                        using (var stream = File.OpenRead(currItem))
                         {
-                            this.itemsInDir[idx].IsDuplicate = true;
-                            this.duplicateFileNames.Add(this.itemsInDir[idx].Filename);
+                            currHash = md5.ComputeHash(stream);
                         }
                     }
 
+                    exists = false;
+
+                    foreach (var match in matches)
+                    {
+                        if (match.getHash().SequenceEqual(currHash))
+                        {
+                            match.addIndex(this.itemsInDir.IndexOf(item));
+                            exists = true;
+                        }
+                    }
+                    if (!exists)
+                    {
+                        matches.Add(new MatchCheck(currHash, this.itemsInDir.IndexOf(item)));
+                    }
                 }
 
-                if (dupes != null)
-                {
-                    duplicateItems.AddRange(dupes);
-                }
-
-                Mouse.OverrideCursor = Cursors.Arrow;
-                lstFiles.ItemsSource = this.itemsInDir;
+                GetDuplicates(matches);
 
             }
 
+            Mouse.OverrideCursor = Cursors.Arrow;
+            lstFiles.ItemsSource = this.itemsInDir;
 
 
         }
